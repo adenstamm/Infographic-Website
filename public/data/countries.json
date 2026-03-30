@@ -1,0 +1,93 @@
+[
+  {
+    "slug": "japan",
+    "name": "Japan",
+    "region": "East Asia",
+    "capital": "Tokyo",
+    "populationMillions": 125.1,
+    "areaKm2": 377975,
+    "currency": "Japanese yen (JPY)",
+    "languages": ["Japanese"],
+    "gdpUsdBillions": 4231,
+    "flagEmoji": "🇯🇵",
+    "shortOverview": "Japan is an island nation in East Asia known for its blend of cutting-edge technology, deep cultural traditions, and dramatic landscapes ranging from neon cities to quiet mountain villages.",
+    "funFacts": [
+      "Japan is home to more than 6,800 islands, though most people live on just four of them.",
+      "High-speed Shinkansen trains have an average delay measured in seconds per year.",
+      "Vending machines are famously everywhere, offering everything from hot coffee to umbrellas."
+    ]
+  },
+  {
+    "slug": "france",
+    "name": "France",
+    "region": "Western Europe",
+    "capital": "Paris",
+    "populationMillions": 68.0,
+    "areaKm2": 551695,
+    "currency": "Euro (EUR)",
+    "languages": ["French"],
+    "gdpUsdBillions": 2943,
+    "flagEmoji": "🇫🇷",
+    "shortOverview": "France is a major European country known for its art, fashion, cuisine, and varied landscapes from Atlantic beaches to the Alps and Mediterranean coastline.",
+    "funFacts": [
+      "France is the most visited country in the world by international tourists.",
+      "The Louvre in Paris is the largest art museum on Earth.",
+      "There are more types of French cheese than days in a year."
+    ]
+  },
+  {
+    "slug": "brazil",
+    "name": "Brazil",
+    "region": "South America",
+    "capital": "Brasília",
+    "populationMillions": 203.1,
+    "areaKm2": 8515767,
+    "currency": "Brazilian real (BRL)",
+    "languages": ["Portuguese"],
+    "gdpUsdBillions": 1920,
+    "flagEmoji": "🇧🇷",
+    "shortOverview": "Brazil is the largest country in South America, famous for the Amazon rainforest, vibrant cities like Rio de Janeiro and São Paulo, and a strong football culture.",
+    "funFacts": [
+      "Brazil shares borders with every South American country except Chile and Ecuador.",
+      "The Amazon rainforest produces a significant share of the world's oxygen.",
+      "Rio's Christ the Redeemer statue is one of the New Seven Wonders of the World."
+    ]
+  },
+  {
+    "slug": "kenya",
+    "name": "Kenya",
+    "region": "East Africa",
+    "capital": "Nairobi",
+    "populationMillions": 55.1,
+    "areaKm2": 580367,
+    "currency": "Kenyan shilling (KES)",
+    "languages": ["Swahili", "English"],
+    "gdpUsdBillions": 115,
+    "flagEmoji": "🇰🇪",
+    "shortOverview": "Kenya is known for its wildlife-rich savannas, the Great Rift Valley, and highland regions that produce world-famous long-distance runners.",
+    "funFacts": [
+      "The Great Migration of wildebeest passes through Kenya's Maasai Mara every year.",
+      "Mount Kenya is Africa's second-highest peak after Kilimanjaro.",
+      "Nairobi is one of the few world capitals with a national park on its doorstep."
+    ]
+  },
+  {
+    "slug": "australia",
+    "name": "Australia",
+    "region": "Oceania",
+    "capital": "Canberra",
+    "populationMillions": 26.5,
+    "areaKm2": 7692024,
+    "currency": "Australian dollar (AUD)",
+    "languages": ["English"],
+    "gdpUsdBillions": 1676,
+    "flagEmoji": "🇦🇺",
+    "shortOverview": "Australia is a vast island continent known for its unique wildlife, laid-back coastal cities, and dramatic outback landscapes.",
+    "funFacts": [
+      "Australia is roughly the same size as the continental United States but with a much smaller population.",
+      "The Great Barrier Reef is the largest coral reef system on the planet.",
+      "More than 80% of Australians live within 100 km of the coast."
+    ]
+  }
+]
+

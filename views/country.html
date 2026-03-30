@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Country Explorer</title>
+    <link rel="stylesheet" href="/tailwind.css">
+</head>
+<body class="min-h-screen bg-zinc-950 text-zinc-100">
+    <div class="sticky top-0 z-10 border-b border-white/10 bg-zinc-950/85 backdrop-blur">
+        <div class="mx-auto flex w-full max-w-5xl items-center gap-3 px-6 py-4">
+            <a href="/" class="inline-flex items-center gap-2 text-sm font-semibold tracking-wide text-zinc-200">
+                <span class="grid size-7 place-items-center rounded-lg bg-zinc-900 ring-1 ring-white/10">CE</span>
+                <span class="hidden sm:inline">Country Explorer</span>
+            </a>
+
+            <form id="topSearchForm" class="ml-auto flex w-full max-w-2xl items-stretch gap-2">
+                <label class="sr-only" for="topCountryQuery">Country</label>
+                <div class="flex w-full items-stretch gap-2 rounded-2xl bg-zinc-900 p-2 ring-1 ring-white/10">
+                    <input
+                        id="topCountryQuery"
+                        name="q"
+                        autocomplete="off"
+                        placeholder="Search another country…"
+                        class="h-10 w-full rounded-xl bg-transparent px-4 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none"
+                    />
+                    <button
+                        type="submit"
+                        class="h-10 shrink-0 rounded-xl bg-white px-4 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                    >
+                        Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <main class="mx-auto w-full max-w-5xl px-6 py-10">
+        <div id="countryStatus" class="text-sm text-zinc-400">Loading country…</div>
+
+        <section id="countryReport" class="mt-6 hidden">
+            <header class="rounded-3xl bg-gradient-to-b from-zinc-900 to-zinc-950 p-8 ring-1 ring-white/10">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <div class="text-sm text-zinc-400" id="countryRegion"></div>
+                        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-zinc-50 sm:text-4xl" id="countryName"></h1>
+                        <div class="mt-3 text-sm text-zinc-400" id="countryMeta"></div>
+                    </div>
+                    <div class="text-5xl" aria-hidden="true" id="countryFlag"></div>
+                </div>
+            </header>
+
+            <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" id="statsGrid"></div>
+
+            <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <section class="lg:col-span-2 rounded-3xl bg-zinc-900/60 p-7 ring-1 ring-white/10">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-zinc-300">Overview</h2>
+                    <p class="mt-4 text-sm leading-6 text-zinc-300" id="countryOverview"></p>
+                </section>
+
+                <section class="rounded-3xl bg-zinc-900/60 p-7 ring-1 ring-white/10">
+                    <h2 class="text-sm font-semibold uppercase tracking-wider text-zinc-300">Fun facts</h2>
+                    <ul class="mt-4 space-y-3 text-sm text-zinc-300" id="countryFunFacts"></ul>
+                </section>
+            </div>
+
+            <section class="mt-6 rounded-3xl bg-zinc-900/60 p-7 ring-1 ring-white/10">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-zinc-300">Quick notes</h2>
+                <div class="mt-4 text-sm text-zinc-300">
+                    <p> this is just a fake dataset. we need to implement our sql database here </p>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <script src="/js/country.js" defer></script>
+</body>
+</html>
+
