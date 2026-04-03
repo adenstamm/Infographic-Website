@@ -18,6 +18,48 @@ function getSlugFromPath() {
   return parts[1] || "";
 }
 
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null && text !== "") node.textContent = text;
+  return node;
+}
+
+function sectionCard(title) {
+  const section = el("section", "rounded-3xl bg-zinc-900/60 p-7 ring-1 ring-white/10");
+  const h = el("h2", "text-sm font-semibold uppercase tracking-wider text-zinc-300", title);
+  const body = el("div", "mt-4");
+  section.appendChild(h);
+  section.appendChild(body);
+  return { section, body };
+}
+
+function buildTable(headers, rows) {
+  const wrap = el("div", "overflow-x-auto rounded-xl ring-1 ring-white/10");
+  const table = el("table", "w-full min-w-[28rem] text-left text-sm text-zinc-300");
+  const thead = el("thead", "border-b border-white/10 bg-zinc-900/80");
+  const trh = el("tr");
+  headers.forEach((h) => {
+    const th = el("th", "px-3 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400", h);
+    trh.appendChild(th);
+  });
+  thead.appendChild(trh);
+  const tbody = el("tbody", "divide-y divide-white/10");
+  rows.forEach((cells) => {
+    const tr = el("tr", "hover:bg-white/[0.03]");
+    cells.forEach((c) => {
+      const td = el("td", "px-3 py-2 align-top");
+      td.textContent = c == null ? "—" : String(c);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  return wrap;
+}
+
 async function loadCountry() {
   const statusEl = document.getElementById("countryStatus");
   const reportEl = document.getElementById("countryReport");
@@ -40,7 +82,7 @@ async function loadCountry() {
 
     const match = countries.find((c) => c.slug === slug);
 
-    if (!match) {
+    if (!match || !match.country) {
       statusEl.innerHTML =
         'Country not found. Try searching again from the bar above or go back to the <a href="/" class="text-zinc-200 underline">landing page</a>.';
       reportEl.classList.add("hidden");
@@ -56,95 +98,155 @@ async function loadCountry() {
   }
 }
 
-function renderCountry(country) {
+function renderCountry(record) {
+  const c = record.country;
+  const d = record.detailedCountryInfo;
+  const aq = record.airQuality;
+  const quakes = record.earthquakes || [];
+  const pop = record.population;
+  const wx = record.weather;
+  const happy = record.happiness || [];
+
   const nameEl = document.getElementById("countryName");
   const regionEl = document.getElementById("countryRegion");
   const metaEl = document.getElementById("countryMeta");
-  const flagEl = document.getElementById("countryFlag");
-  const overviewEl = document.getElementById("countryOverview");
-  const funFactsEl = document.getElementById("countryFunFacts");
+  const flagImg = document.getElementById("countryFlagImg");
   const statsGridEl = document.getElementById("statsGrid");
+  const entitySections = document.getElementById("entitySections");
 
-  if (!nameEl) return;
+  if (!nameEl || !statsGridEl || !entitySections) return;
 
-  nameEl.textContent = country.name;
-  regionEl.textContent = country.region || "";
+  nameEl.textContent = c.name;
+  regionEl.textContent = [c.region, c.subregion].filter(Boolean).join(" · ");
 
   const metaBits = [];
-  if (country.capital) metaBits.push(`Capital: ${country.capital}`);
-  if (typeof country.populationMillions === "number") {
-    metaBits.push(`Population: ~${country.populationMillions.toLocaleString()}M`);
+  metaBits.push(`ID ${c.id}`);
+  if (c.continents) metaBits.push(c.continents);
+  if (c.capital) metaBits.push(`Capital: ${c.capital}`);
+  metaEl.textContent = metaBits.join(" · ");
+
+  if (flagImg && d?.flags) {
+    flagImg.src = d.flags;
+    flagImg.alt = `Flag of ${c.name}`;
+    flagImg.classList.remove("hidden");
+  } else if (flagImg) {
+    flagImg.removeAttribute("src");
+    flagImg.classList.add("hidden");
   }
-  if (country.languages?.length) {
-    metaBits.push(`Languages: ${country.languages.join(", ")}`);
-  }
-  metaEl.textContent = metaBits.join(" • ");
-
-  flagEl.textContent = country.flagEmoji || "";
-
-  overviewEl.textContent = country.shortOverview || "";
-
-  funFactsEl.innerHTML = "";
-  (country.funFacts || []).forEach((fact) => {
-    const li = document.createElement("li");
-    li.textContent = fact;
-    funFactsEl.appendChild(li);
-  });
 
   const stats = [
-    {
-      label: "Population",
-      value:
-        typeof country.populationMillions === "number"
-          ? `${country.populationMillions.toLocaleString()} million`
-          : "—",
-    },
-    {
-      label: "Area",
-      value:
-        typeof country.areaKm2 === "number"
-          ? `${country.areaKm2.toLocaleString()} km²`
-          : "—",
-    },
-    {
-      label: "GDP (approx.)",
-      value:
-        typeof country.gdpUsdBillions === "number"
-          ? `$${country.gdpUsdBillions.toLocaleString()}B`
-          : "—",
-    },
-    {
-      label: "Currency",
-      value: country.currency || "—",
-    },
-    {
-      label: "Region",
-      value: country.region || "—",
-    },
-    {
-      label: "Languages",
-      value: country.languages?.join(", ") || "—",
-    },
+    { label: "Population", value: typeof c.populationNumber === "number" ? c.populationNumber.toLocaleString() : "—" },
+    { label: "Country center (lat, lng)", value: `${c.latitude}, ${c.longitude}` },
+    { label: "Capital coords (lat, lng)", value: d ? `${d.capitalLatitude}, ${d.capitalLongitude}` : "—" },
+    { label: "Languages", value: c.languages || "—" },
+    { label: "Borders", value: c.borders || "—" },
+    { label: "Currencies", value: d?.currencies || "—" },
   ];
 
   statsGridEl.innerHTML = "";
   stats.forEach((s) => {
-    const card = document.createElement("article");
-    card.className =
-      "rounded-2xl bg-zinc-900/70 p-4 ring-1 ring-white/10 flex flex-col gap-1";
-
-    const label = document.createElement("div");
-    label.className = "text-xs font-medium uppercase tracking-wide text-zinc-400";
-    label.textContent = s.label;
-
-    const value = document.createElement("div");
-    value.className = "text-sm font-semibold text-zinc-50";
-    value.textContent = s.value;
-
-    card.appendChild(label);
-    card.appendChild(value);
+    const card = el("article", "flex flex-col gap-1 rounded-2xl bg-zinc-900/70 p-4 ring-1 ring-white/10");
+    card.appendChild(el("div", "text-xs font-medium uppercase tracking-wide text-zinc-400", s.label));
+    card.appendChild(el("div", "text-sm font-semibold text-zinc-50", s.value));
     statsGridEl.appendChild(card);
   });
+
+  entitySections.innerHTML = "";
+
+  if (d) {
+    const { section, body } = sectionCard("Detailed country info");
+    const p1 = el("p", "text-sm leading-6 text-zinc-300");
+    p1.appendChild(document.createTextNode("Timezones: "));
+    p1.appendChild(el("span", "text-zinc-200", d.timezones));
+    const p2 = el("p", "mt-2 text-sm leading-6 text-zinc-300");
+    p2.appendChild(document.createTextNode("Demonyms: "));
+    p2.appendChild(el("span", "text-zinc-200", d.demonyms));
+    const p3 = el("p", "mt-3 text-sm");
+    const link = el("a", "font-medium text-emerald-400 underline decoration-emerald-400/40 hover:text-emerald-300", "Open map (OpenStreetMap)");
+    link.href = d.maps;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    p3.appendChild(link);
+    body.appendChild(p1);
+    body.appendChild(p2);
+    body.appendChild(p3);
+    entitySections.appendChild(section);
+  }
+
+  if (aq) {
+    const { section, body } = sectionCard("Air quality");
+    body.appendChild(
+      el(
+        "p",
+        "mb-4 text-sm text-zinc-300",
+        `Overall AQI: ${aq.overallAQI} (aqiID ${aq.aqiID}, countryID ${aq.countryID}) — mock composite for prototype.`
+      )
+    );
+    const pm = aq.pollutantMeasurements || [];
+    if (pm.length) {
+      body.appendChild(
+        buildTable(
+          ["measurementID", "aqiID", "aqiValue", "pollutantType", "concentration"],
+          pm.map((m) => [m.measurementID, m.aqiID, m.aqiValue, m.pollutantType, m.concentration])
+        )
+      );
+    } else {
+      body.appendChild(el("p", "text-sm text-zinc-500", "No pollutant measurements."));
+    }
+    entitySections.appendChild(section);
+  }
+
+  {
+    const { section, body } = sectionCard("Earthquakes (sample events)");
+    if (quakes.length) {
+      body.appendChild(
+        buildTable(
+          ["earthquakeID", "latitude", "longitude", "startTime", "endTime"],
+          quakes.map((q) => [q.earthquakeID, q.latitude, q.longitude, q.startTime, q.endTime])
+        )
+      );
+    } else {
+      body.appendChild(el("p", "text-sm text-zinc-500", "No earthquake rows for this country in mock data."));
+    }
+    entitySections.appendChild(section);
+  }
+
+  if (pop) {
+    const { section, body } = sectionCard("Population (1:1)");
+    body.appendChild(el("h3", "text-xs font-semibold uppercase tracking-wide text-zinc-400", "Forecast"));
+    body.appendChild(el("p", "mt-2 text-sm leading-6 text-zinc-300", pop.populationForecast));
+    body.appendChild(el("h3", "mt-5 text-xs font-semibold uppercase tracking-wide text-zinc-400", "Historical"));
+    body.appendChild(el("p", "mt-2 text-sm leading-6 text-zinc-300", pop.historicalPopulation));
+    entitySections.appendChild(section);
+  }
+
+  if (wx) {
+    const { section, body } = sectionCard("Weather (1:1)");
+    const ul = el("ul", "list-inside list-disc space-y-2 text-sm text-zinc-300");
+    ul.appendChild(el("li", "", `Annual rainfall (mock mm): ${wx.rainfall}`));
+    ul.appendChild(el("li", "", `Average temperature (mock °C): ${wx.avgTemp}`));
+    ul.appendChild(
+      el(
+        "li",
+        "",
+        `Historical climate index (mock): ${wx.historicalClimate} — in the schema this is INT; here it represents years of baseline climate record for the prototype.`
+      )
+    );
+    body.appendChild(ul);
+    entitySections.appendChild(section);
+  }
+
+  if (happy.length) {
+    const sorted = [...happy].sort((a, b) => b.year - a.year);
+    const { section, body } = sectionCard("Happiness (past years — mock scores)");
+    body.appendChild(
+      buildTable(
+        ["year", "happinessScore", "countryCode", "countryName"],
+        sorted.map((h) => [h.year, h.happinessScore, h.countryCode, h.countryName])
+      )
+    );
+    entitySections.appendChild(section);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -168,4 +270,3 @@ document.addEventListener("DOMContentLoaded", () => {
 
   loadCountry();
 });
-
