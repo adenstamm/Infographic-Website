@@ -56,7 +56,9 @@ CREATE TABLE Earthquake (
     latitude        DECIMAL(9, 6)  NOT NULL,
     longitude       DECIMAL(9, 6)  NOT NULL,
     startTime       TIMESTAMP      NOT NULL,
-    endTime         TIMESTAMP      NOT NULL
+    endTime         TIMESTAMP      NOT NULL,
+    magnitude       DECIMAL(3,1)   NOT NULL,
+    place           VARCHAR(200)   
 );
 
 
@@ -71,9 +73,10 @@ CREATE TABLE Population (
 -- Weather (1-to-1 with Country)
 CREATE TABLE Weather (
     countryName         VARCHAR(100)    PRIMARY KEY REFERENCES Country(name) ON DELETE CASCADE,
-    rainfall            INT             NOT NULL,
-    avgTemp             NUMERIC(5, 2)   NOT NULL,
-    historicalClimate   INT             NOT NULL
+    rainfallMM          NUMERIC(5, 2)   NOT NULL,
+    currentTemp         NUMERIC(5, 2)   NOT NULL,
+    humidity            INT             NOT NULL,
+    uvIndex             NUMERIC(5, 2)   NOT NULL
 );
 
 
