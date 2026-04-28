@@ -1,0 +1,108 @@
+-- ============================================================
+-- CSE 412 - Phase 02
+-- Country Information System
+-- Group 39: Maverick Madison, Prisha Nag, Aden Stamm, Gunnar Wise
+-- DDL Script - ER-to-Relational Schema Implementation
+-- ============================================================
+
+-- Drop tables in reverse dependency order (for clean re-runs)
+DROP TABLE IF EXISTS PollutantMeasurement CASCADE;
+DROP TABLE IF EXISTS AirQuality CASCADE;
+DROP TABLE IF EXISTS Earthquake CASCADE;
+DROP TABLE IF EXISTS Population CASCADE;
+DROP TABLE IF EXISTS Weather CASCADE;
+DROP TABLE IF EXISTS Happiness CASCADE;
+DROP TABLE IF EXISTS DetailedCountryInfo CASCADE;
+DROP TABLE IF EXISTS Country CASCADE;
+
+
+-- Country (Main / Parent Table)
+CREATE TABLE Country (
+    id              SERIAL PRIMARY KEY,
+    name            VARCHAR(100) NOT NULL UNIQUE,
+    region          VARCHAR(100) NOT NULL,
+    subregion       VARCHAR(100),
+    longitude       DECIMAL(9, 6),
+    latitude        DECIMAL(9, 6),
+    continents      VARCHAR(100) NOT NULL,
+    capital         VARCHAR(100),
+    languages       VARCHAR(300) NOT NULL,
+    populationNumber INT
+);
+
+
+-- Air Quality (1-to-Many with Country)
+CREATE TABLE AirQuality (
+    aqiID       SERIAL PRIMARY KEY,
+    countryID   INT     NOT NULL REFERENCES Country(id) ON DELETE CASCADE,
+    overallAQI  INT     NOT NULL
+);
+
+
+-- Pollutant Measurement (1-to-Many with AirQuality)
+CREATE TABLE PollutantMeasurement (
+    measurementID   SERIAL PRIMARY KEY,
+    aqiID           INT             NOT NULL REFERENCES AirQuality(aqiID) ON DELETE CASCADE,
+    pollutantType   VARCHAR(50)     NOT NULL,
+    aqiValue        INT             NOT NULL,
+    concentration   DECIMAL(6, 2)  NOT NULL
+);
+
+
+-- Earthquake (1-to-Many with Country via transition table)
+CREATE TABLE Earthquake (
+    earthquakeID    SERIAL PRIMARY KEY,
+    countryID       INT             NOT NULL REFERENCES Country(id) ON DELETE CASCADE,
+    latitude        DECIMAL(9, 6)  NOT NULL,
+    longitude       DECIMAL(9, 6)  NOT NULL,
+    startTime       TIMESTAMP      NOT NULL,
+    endTime         TIMESTAMP      NOT NULL,
+    magnitude       DECIMAL(3,1)   NOT NULL,
+    place           VARCHAR(200)   
+);
+
+
+-- Population (1-to-1 with Country)
+CREATE TABLE Population (
+    countryName         VARCHAR(100) PRIMARY KEY REFERENCES Country(name) ON DELETE CASCADE,
+    populationForecast  TEXT         NOT NULL,
+    historicalPopulation TEXT        NOT NULL
+);
+
+
+-- Weather (1-to-1 with Country)
+CREATE TABLE Weather (
+    countryName         VARCHAR(100)    PRIMARY KEY REFERENCES Country(name) ON DELETE CASCADE,
+    rainfallMM          NUMERIC(5, 2)   NOT NULL,
+    currentTemp         NUMERIC(5, 2)   NOT NULL,
+    humidity            INT             NOT NULL,
+    uvIndex             NUMERIC(5, 2)   NOT NULL
+);
+
+
+-- Happiness (1-to-1 with Country)
+CREATE TABLE Happiness (
+    countryID       INT             NOT NULL REFERENCES Country(id) ON DELETE CASCADE,
+    countryName     VARCHAR(100)    NOT NULL REFERENCES Country(name) ON DELETE CASCADE,
+    year            INT             NOT NULL,
+    happinessScore  NUMERIC(5, 3)   NOT NULL,
+    PRIMARY KEY (countryID, year)
+);
+
+
+-- Detailed Country Info (1-to-1 with Country)
+CREATE TABLE DetailedCountryInfo (
+    countryName VARCHAR(100)    PRIMARY KEY REFERENCES Country(name) ON DELETE CASCADE,
+    currencies  VARCHAR(200)    NOT NULL,
+    maps        TEXT            NOT NULL,
+    capitalInfo DECIMAL(9, 6),
+    timezones   VARCHAR(200)    NOT NULL,
+    demonyms    VARCHAR(100)    NOT NULL,
+    flags       TEXT            NOT NULL
+);
+
+-- View tables
+SELECT table_name 
+FROM information_schema.tables 
+WHERE table_schema = 'public'
+ORDER BY table_name;
