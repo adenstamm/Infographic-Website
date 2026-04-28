@@ -1,18 +1,3 @@
-function slugifyCountryQuery(input) {
-  return String(input || "")
-    .trim()
-    .toLowerCase()
-    .replace(/['’]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
-function goToCountry(query) {
-  const slug = slugifyCountryQuery(query);
-  if (!slug) return;
-  window.location.href = `/country/${encodeURIComponent(slug)}`;
-}
-
 function getSlugFromPath() {
   const parts = window.location.pathname.split("/").filter(Boolean);
   return parts[1] || "";
@@ -60,9 +45,27 @@ function buildTable(headers, rows) {
   return wrap;
 }
 
+function formatNumber(value, options) {
+  if (typeof value !== "number" || Number.isNaN(value)) return "—";
+  return value.toLocaleString(undefined, options);
+}
+
+function formatCoordinates(latitude, longitude) {
+  if (typeof latitude !== "number" || typeof longitude !== "number") return "—";
+  return `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString();
+}
+
 async function loadCountry() {
   const statusEl = document.getElementById("countryStatus");
   const reportEl = document.getElementById("countryReport");
+  const topInput = document.getElementById("topCountryQuery");
 
   if (!statusEl || !reportEl) return;
 
@@ -73,24 +76,31 @@ async function loadCountry() {
   }
 
   try {
-    statusEl.textContent = "Loading country…";
+    statusEl.textContent = "Loading country...";
 
-    const res = await fetch("/data/countries.json");
-    if (!res.ok) throw new Error("Failed to load data");
-
-    const countries = await res.json();
-
-    const match = countries.find((c) => c.slug === slug);
-
-    if (!match || !match.country) {
+    const res = await fetch(`/api/countries/${encodeURIComponent(slug)}`);
+    if (res.status === 404) {
       statusEl.innerHTML =
         'Country not found. Try searching again from the bar above or go back to the <a href="/" class="text-zinc-200 underline">landing page</a>.';
       reportEl.classList.add("hidden");
       return;
     }
 
+    if (!res.ok) throw new Error("Failed to load data");
+
+    const match = await res.json();
     renderCountry(match);
-    statusEl.textContent = "";
+
+    if (topInput) {
+      topInput.value = match.country?.name || match.happiness?.countryName || "";
+    }
+
+    if (match.metadataAvailable) {
+      statusEl.textContent = "";
+    } else {
+      statusEl.textContent = "Showing available data. Some live country details could not be fetched.";
+    }
+
     reportEl.classList.remove("hidden");
   } catch (err) {
     console.error(err);
@@ -101,11 +111,9 @@ async function loadCountry() {
 function renderCountry(record) {
   const c = record.country;
   const d = record.detailedCountryInfo;
-  const aq = record.airQuality;
-  const quakes = record.earthquakes || [];
-  const pop = record.population;
-  const wx = record.weather;
-  const happy = record.happiness || [];
+  const happy = Array.isArray(record.happiness) ? record.happiness : [];
+  const latestHappy = happy[0] || null;
+  const cacheInfo = record.cache;
 
   const nameEl = document.getElementById("countryName");
   const regionEl = document.getElementById("countryRegion");
@@ -116,18 +124,26 @@ function renderCountry(record) {
 
   if (!nameEl || !statsGridEl || !entitySections) return;
 
-  nameEl.textContent = c.name;
-  regionEl.textContent = [c.region, c.subregion].filter(Boolean).join(" · ");
+  const displayName = c?.name || latestHappy?.countryName || "Country";
+  document.title = `${displayName} | Country Explorer`;
+
+  nameEl.textContent = displayName;
+  regionEl.textContent =
+    [c?.region, c?.subregion].filter(Boolean).join(" · ") || "World Happiness dataset";
 
   const metaBits = [];
-  metaBits.push(`ID ${c.id}`);
-  if (c.continents) metaBits.push(c.continents);
-  if (c.capital) metaBits.push(`Capital: ${c.capital}`);
+  if (c?.continents) metaBits.push(c.continents);
+  if (c?.capital) metaBits.push(`Capital: ${c.capital}`);
+  if (typeof latestHappy?.rank === "number" && typeof latestHappy?.countryCount === "number") {
+    metaBits.push(`Happiness rank: #${latestHappy.rank} of ${latestHappy.countryCount}`);
+  }
+  if (record.source === "database") metaBits.push("Loaded from database");
+  if (record.source === "live") metaBits.push("Fresh lookup");
   metaEl.textContent = metaBits.join(" · ");
 
   if (flagImg && d?.flags) {
     flagImg.src = d.flags;
-    flagImg.alt = `Flag of ${c.name}`;
+    flagImg.alt = `Flag of ${displayName}`;
     flagImg.classList.remove("hidden");
   } else if (flagImg) {
     flagImg.removeAttribute("src");
@@ -135,11 +151,29 @@ function renderCountry(record) {
   }
 
   const stats = [
-    { label: "Population", value: typeof c.populationNumber === "number" ? c.populationNumber.toLocaleString() : "—" },
-    { label: "Country center (lat, lng)", value: `${c.latitude}, ${c.longitude}` },
-    { label: "Capital coords (lat, lng)", value: d ? `${d.capitalLatitude}, ${d.capitalLongitude}` : "—" },
-    { label: "Languages", value: c.languages || "—" },
-    { label: "Borders", value: c.borders || "—" },
+    {
+      label: "Happiness score",
+      value:
+        typeof latestHappy?.happinessScore === "number"
+          ? formatNumber(latestHappy.happinessScore, {
+              minimumFractionDigits: 3,
+              maximumFractionDigits: 3,
+            })
+          : "—",
+    },
+    { label: "Report year", value: latestHappy?.year ?? "—" },
+    {
+      label: "World rank",
+      value:
+        typeof latestHappy?.rank === "number" && typeof latestHappy?.countryCount === "number"
+          ? `#${latestHappy.rank} / ${latestHappy.countryCount}`
+          : "—",
+    },
+    { label: "Population", value: formatNumber(c?.populationNumber) },
+    { label: "Country center (lat, lng)", value: formatCoordinates(c?.latitude, c?.longitude) },
+    { label: "Capital coords (lat, lng)", value: formatCoordinates(d?.capitalLatitude, d?.capitalLongitude) },
+    { label: "Languages", value: c?.languages || "—" },
+    { label: "Borders", value: c?.borders || "—" },
     { label: "Currencies", value: d?.currencies || "—" },
   ];
 
@@ -153,98 +187,156 @@ function renderCountry(record) {
 
   entitySections.innerHTML = "";
 
-  if (d) {
+  if (d || c?.officialName) {
     const { section, body } = sectionCard("Detailed country info");
-    const p1 = el("p", "text-sm leading-6 text-zinc-300");
-    p1.appendChild(document.createTextNode("Timezones: "));
-    p1.appendChild(el("span", "text-zinc-200", d.timezones));
-    const p2 = el("p", "mt-2 text-sm leading-6 text-zinc-300");
-    p2.appendChild(document.createTextNode("Demonyms: "));
-    p2.appendChild(el("span", "text-zinc-200", d.demonyms));
-    const p3 = el("p", "mt-3 text-sm");
-    const link = el("a", "font-medium text-emerald-400 underline decoration-emerald-400/40 hover:text-emerald-300", "Open map (OpenStreetMap)");
-    link.href = d.maps;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    p3.appendChild(link);
-    body.appendChild(p1);
-    body.appendChild(p2);
-    body.appendChild(p3);
-    entitySections.appendChild(section);
-  }
+    const details = [
+      ["Official name", c?.officialName],
+      ["Timezones", d?.timezones],
+      ["Demonyms", d?.demonyms],
+      ["Capital", c?.capital],
+      ["Region", [c?.region, c?.subregion].filter(Boolean).join(", ") || null],
+    ];
 
-  if (aq) {
-    const { section, body } = sectionCard("Air quality");
-    body.appendChild(
-      el(
-        "p",
-        "mb-4 text-sm text-zinc-300",
-        `Overall AQI: ${aq.overallAQI} (aqiID ${aq.aqiID}, countryID ${aq.countryID}) — mock composite for prototype.`
-      )
-    );
-    const pm = aq.pollutantMeasurements || [];
-    if (pm.length) {
-      body.appendChild(
-        buildTable(
-          ["measurementID", "aqiID", "aqiValue", "pollutantType", "concentration"],
-          pm.map((m) => [m.measurementID, m.aqiID, m.aqiValue, m.pollutantType, m.concentration])
-        )
+    details.forEach(([label, value]) => {
+      if (!value) return;
+      const paragraph = el("p", "text-sm leading-6 text-zinc-300");
+      paragraph.appendChild(document.createTextNode(`${label}: `));
+      paragraph.appendChild(el("span", "text-zinc-200", value));
+      body.appendChild(paragraph);
+    });
+
+    if (d?.maps) {
+      const mapRow = el("p", "mt-3 text-sm");
+      const link = el(
+        "a",
+        "font-medium text-emerald-400 underline decoration-emerald-400/40 hover:text-emerald-300",
+        "Open map (OpenStreetMap)"
       );
-    } else {
-      body.appendChild(el("p", "text-sm text-zinc-500", "No pollutant measurements."));
+      link.href = d.maps;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      mapRow.appendChild(link);
+      body.appendChild(mapRow);
     }
-    entitySections.appendChild(section);
-  }
 
-  {
-    const { section, body } = sectionCard("Earthquakes (sample events)");
-    if (quakes.length) {
-      body.appendChild(
-        buildTable(
-          ["earthquakeID", "latitude", "longitude", "startTime", "endTime"],
-          quakes.map((q) => [q.earthquakeID, q.latitude, q.longitude, q.startTime, q.endTime])
-        )
-      );
-    } else {
-      body.appendChild(el("p", "text-sm text-zinc-500", "No earthquake rows for this country in mock data."));
-    }
-    entitySections.appendChild(section);
-  }
-
-  if (pop) {
-    const { section, body } = sectionCard("Population (1:1)");
-    body.appendChild(el("h3", "text-xs font-semibold uppercase tracking-wide text-zinc-400", "Forecast"));
-    body.appendChild(el("p", "mt-2 text-sm leading-6 text-zinc-300", pop.populationForecast));
-    body.appendChild(el("h3", "mt-5 text-xs font-semibold uppercase tracking-wide text-zinc-400", "Historical"));
-    body.appendChild(el("p", "mt-2 text-sm leading-6 text-zinc-300", pop.historicalPopulation));
-    entitySections.appendChild(section);
-  }
-
-  if (wx) {
-    const { section, body } = sectionCard("Weather (1:1)");
-    const ul = el("ul", "list-inside list-disc space-y-2 text-sm text-zinc-300");
-    ul.appendChild(el("li", "", `Annual rainfall (mock mm): ${wx.rainfall}`));
-    ul.appendChild(el("li", "", `Average temperature (mock °C): ${wx.avgTemp}`));
-    ul.appendChild(
-      el(
-        "li",
-        "",
-        `Historical climate index (mock): ${wx.historicalClimate} — in the schema this is INT; here it represents years of baseline climate record for the prototype.`
-      )
-    );
-    body.appendChild(ul);
     entitySections.appendChild(section);
   }
 
   if (happy.length) {
-    const sorted = [...happy].sort((a, b) => b.year - a.year);
-    const { section, body } = sectionCard("Happiness (past years — mock scores)");
+    const { section, body } = sectionCard("World Happiness Report");
+    const summary = el(
+      "p",
+      "mb-4 text-sm leading-6 text-zinc-300",
+      `${latestHappy.countryName} has a recorded happiness score of ${formatNumber(latestHappy.happinessScore, {
+        minimumFractionDigits: 3,
+        maximumFractionDigits: 3,
+      })} for ${latestHappy.year}.`
+    );
+    body.appendChild(summary);
     body.appendChild(
       buildTable(
-        ["year", "happinessScore", "countryCode", "countryName"],
-        sorted.map((h) => [h.year, h.happinessScore, h.countryCode, h.countryName])
+        ["country", "year", "happiness score", "world rank"],
+        happy.map((row) => [
+          row.countryName,
+          row.year ?? "—",
+          typeof row.happinessScore === "number"
+            ? formatNumber(row.happinessScore, {
+                minimumFractionDigits: 3,
+                maximumFractionDigits: 3,
+              })
+            : "—",
+          typeof row.rank === "number" ? `#${row.rank}` : "—",
+        ])
       )
     );
+    body.appendChild(
+      el("p", "mt-4 text-xs text-zinc-500", "Source: csv/happiness.csv")
+    );
+    entitySections.appendChild(section);
+  }
+
+  if (record.population) {
+    const { section, body } = sectionCard("Population");
+    if (record.population.populationForecast) {
+      body.appendChild(el("h3", "text-xs font-semibold uppercase tracking-wide text-zinc-400", "Forecast"));
+      body.appendChild(el("p", "mt-2 text-sm leading-6 text-zinc-300", record.population.populationForecast));
+    }
+    if (record.population.historicalPopulation) {
+      body.appendChild(el("h3", "mt-5 text-xs font-semibold uppercase tracking-wide text-zinc-400", "Historical"));
+      body.appendChild(el("p", "mt-2 text-sm leading-6 text-zinc-300", record.population.historicalPopulation));
+    }
+    entitySections.appendChild(section);
+  }
+
+  if (record.weather) {
+    const { section, body } = sectionCard("Weather");
+    body.appendChild(
+      buildTable(
+        ["rainfall (mm)", "current temp (C)", "humidity", "uv index"],
+        [[
+          record.weather.rainfallMM ?? "—",
+          record.weather.currentTemp ?? "—",
+          record.weather.humidity ?? "—",
+          record.weather.uvIndex ?? "—",
+        ]]
+      )
+    );
+    entitySections.appendChild(section);
+  }
+
+  if (record.airQuality) {
+    const { section, body } = sectionCard("Air Quality");
+    body.appendChild(
+      el(
+        "p",
+        "mb-4 text-sm text-zinc-300",
+        `Overall AQI: ${record.airQuality.overallAQI ?? "—"}`
+      )
+    );
+
+    if (record.airQuality.pollutantMeasurements?.length) {
+      body.appendChild(
+        buildTable(
+          ["pollutant", "aqi", "concentration"],
+          record.airQuality.pollutantMeasurements.map((row) => [
+            row.pollutantType,
+            row.aqiValue ?? "—",
+            row.concentration ?? "—",
+          ])
+        )
+      );
+    }
+
+    entitySections.appendChild(section);
+  }
+
+  if (record.earthquakes?.length) {
+    const { section, body } = sectionCard("Earthquakes");
+    body.appendChild(
+      buildTable(
+        ["magnitude", "place", "start", "updated", "lat", "lng"],
+        record.earthquakes.map((row) => [
+          row.magnitude ?? "—",
+          row.place || "—",
+          formatDateTime(row.startTime),
+          formatDateTime(row.endTime),
+          row.latitude ?? "—",
+          row.longitude ?? "—",
+        ])
+      )
+    );
+    entitySections.appendChild(section);
+  }
+
+  if (cacheInfo) {
+    const { section, body } = sectionCard("Search Cache");
+    const rows = [
+      ["Storage", "PostgreSQL cache"],
+      ["Times searched", cacheInfo.searchCount ?? "—"],
+      ["First searched", cacheInfo.firstSearchedAt ? new Date(cacheInfo.firstSearchedAt).toLocaleString() : "—"],
+      ["Last searched", cacheInfo.lastSearchedAt ? new Date(cacheInfo.lastSearchedAt).toLocaleString() : "—"],
+    ];
+    body.appendChild(buildTable(["field", "value"], rows));
     entitySections.appendChild(section);
   }
 }
@@ -256,11 +348,15 @@ document.addEventListener("DOMContentLoaded", () => {
   if (topForm && topInput) {
     topForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      goToCountry(topInput.value);
+      window.CountrySearch.goToCountry(topInput.value);
     });
   }
 
-  if (topInput) {
+  if (topInput && window.CountrySearch) {
+    window.CountrySearch.ensureCountryDatalist("topCountryOptions").catch(() => {});
+  }
+
+  if (topInput && !topInput.value) {
     const slug = getSlugFromPath();
     if (slug) {
       const humanGuess = slug.replace(/-/g, " ");

@@ -1,36 +1,41 @@
-function slugifyCountryQuery(input) {
-  return String(input || "")
-    .trim()
-    .toLowerCase()
-    .replace(/['’]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
-function goToCountry(query) {
-  const slug = slugifyCountryQuery(query);
-  if (!slug) return;
-  window.location.href = `/country/${encodeURIComponent(slug)}`;
-}
-
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("countrySearchForm");
   const input = document.getElementById("countryQuery");
+  const suggestionRoot = document.getElementById("suggestionChips");
 
   if (input) input.focus();
 
   if (form && input) {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      goToCountry(input.value);
+      window.CountrySearch.goToCountry(input.value);
     });
   }
 
-  document.querySelectorAll(".suggestion-chip").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const value = btn.getAttribute("data-suggest");
-      goToCountry(value);
-    });
-  });
-});
+  if (window.CountrySearch) {
+    window.CountrySearch.ensureCountryDatalist("countryOptions").catch(() => {});
+  }
 
+  if (suggestionRoot && window.CountrySearch) {
+    window.CountrySearch
+      .fetchCountryList({ sort: "happiness", limit: 5 })
+      .then((countries) => {
+        suggestionRoot.innerHTML = "";
+
+        countries.forEach((country) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className =
+            "suggestion-chip rounded-full bg-zinc-900 px-4 py-2 text-sm text-zinc-200 ring-1 ring-white/10 transition hover:bg-zinc-800";
+          button.textContent = country.name;
+          button.addEventListener("click", () => {
+            window.CountrySearch.goToCountry(country.name);
+          });
+          suggestionRoot.appendChild(button);
+        });
+      })
+      .catch(() => {
+        suggestionRoot.innerHTML = "";
+      });
+  }
+});

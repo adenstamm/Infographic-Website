@@ -21,6 +21,7 @@
                         id="topCountryQuery"
                         name="q"
                         autocomplete="off"
+                        list="topCountryOptions"
                         placeholder="Search another country…"
                         class="h-10 w-full rounded-xl bg-transparent px-4 text-sm text-zinc-100 placeholder:text-zinc-500 outline-none"
                     />
@@ -31,6 +32,7 @@
                         Search
                     </button>
                 </div>
+                <datalist id="topCountryOptions"></datalist>
             </form>
         </div>
     </div>
@@ -58,7 +60,7 @@
         </section>
     </main>
 
+    <script src="/js/search.js" defer></script>
     <script src="/js/country.js" defer></script>
 </body>
 </html>
-
