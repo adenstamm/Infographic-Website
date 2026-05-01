@@ -339,6 +339,74 @@ function renderCountry(record) {
     body.appendChild(buildTable(["field", "value"], rows));
     entitySections.appendChild(section);
   }
+
+  // We only want to show the editing and deleting options if this is a custom country loaded from the database, since live lookups cannot be modified or deleted by users.
+  if (c?.is_custom) {
+    const buttonForEditing = el("button", "mt-6 rounded-full bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500", "Edit country");
+    const buttonForDeleting = el("button", "mt-3 rounded-full bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-500", "Delete country");
+
+    const buttonWrapper = el("div", "flex flex-col items-start");
+    buttonWrapper.appendChild(buttonForEditing);
+    buttonWrapper.appendChild(buttonForDeleting);
+    entitySections.appendChild(buttonWrapper);
+
+    buttonForEditing.addEventListener("click", () => {
+      const newName = prompt("Enter a new name for this country:", displayName);
+
+      if (newName && newName.trim() && newName.trim() !== displayName) {
+        fetch(`/api/countries/${c.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: newName.trim() }),
+        })
+          .then((res) => {
+            if (!res.ok) {
+              return res.json().then((data) => {
+                throw new Error(data.error || "Failed to update country");
+              });
+            }
+            return res.json();
+          })
+          .then((updatedCountry) => {
+            alert(`Country renamed to "${updatedCountry.name}" successfully!`);
+            window.CountrySearch.goToCountry(updatedCountry.name);
+          })
+          .catch((error) => {
+            alert(`Error updating country: ${error.message}`);
+          });
+      }
+    });
+
+    buttonForDeleting.addEventListener("click", () => {
+      if (confirm("Are you sure you want to delete this country?")) {
+        // Implementation for deleting the country
+        if(!confirm("This action cannot be undone. Do you really want to proceed?")) {
+          return;
+        }
+        
+        fetch(`/api/countries/${c.id}`, {
+          method: "DELETE",
+        })
+          .then((res) => {
+            if (!res.ok) {
+              return res.json().then((data) => {
+                throw new Error(data.error || "Failed to delete country");
+              });
+            }
+            return res.json();
+          })
+          .then(() => {
+            alert(`Country "${displayName}" deleted successfully!`);
+            window.location.href = "/"; // Redirect to the landing page after deletion
+          })
+          .catch((error) => {
+            alert(`Error deleting country: ${error.message}`);
+          });
+      }
+    });
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {

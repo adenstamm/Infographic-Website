@@ -54,7 +54,8 @@ async function initializeDatabase() {
         cca3 VARCHAR(10),
         searchCount INT NOT NULL DEFAULT 1,
         firstSearchedAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        lastSearchedAt TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        lastSearchedAt TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        is_custom BOOLEAN DEFAULT false
       )
     `);
 
@@ -449,4 +450,5 @@ module.exports = {
   initializeDatabase,
   isDatabaseEnabled,
   upsertCountryBundle,
+  pool,
 };

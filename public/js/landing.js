@@ -38,4 +38,57 @@ document.addEventListener("DOMContentLoaded", () => {
         suggestionRoot.innerHTML = "";
       });
   }
+
+  // These variables are used to toggle the visibility of the "Add Country" form when the button is clicked. The button with ID "toggleAddForm" will show or hide the form with ID "addCountryForm" when clicked.
+  const toggleThemeButton = document.getElementById("toggleAddForm");
+  const toggleAddForm = document.getElementById("addCountryForm");
+
+  // Check if both the toggle button and the form exist before adding the event listener
+  if (toggleThemeButton && toggleAddForm) {
+    // Add a click event listener to the toggle button to show or hide the "Add Country" form
+    toggleThemeButton.addEventListener("click", () => {
+      toggleAddForm.classList.toggle("hidden");
+    });
+  }
+
+  // Now we want to submit the "Add Country" form when the user fills it out and clicks the submit button. We will send a POST request to the server with the country details.
+  const submit = document.getElementById("submitAddCountry");
+  const countryNameInput = document.getElementById("newCountryName");
+
+  if (submit && countryNameInput) {
+    submit.addEventListener("click", async () => {
+      const countryName = countryNameInput.value.trim();
+
+      if (!countryName) {
+        alert("Please enter a country name.");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/countries", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ name: countryName }),
+        });
+
+        if (response.ok) {
+          const newCountry = await response.json();
+          //alert(`Country "${newCountry.name}" added successfully!`);
+          countryNameInput.value = "";
+          toggleAddForm.classList.add("hidden");
+          window.CountrySearch.goToCountry(newCountry.name);
+        } 
+        else {
+          const errorData = await response.json();
+          alert(`Error adding country: ${errorData.error}`);
+        }
+      } 
+      catch (error) {
+        console.error("Error adding country:", error);
+        alert("An error occurred while adding the country. Please try again.");
+      }
+    });
+  }
 });
