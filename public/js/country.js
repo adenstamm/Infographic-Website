@@ -1,8 +1,12 @@
+// This function extracts the country slug from the URL path. 
+// For example, if the URL is "/countries/france", it will return "france". 
+// If the URL does not match this pattern, it returns an empty string.
 function getSlugFromPath() {
   const parts = window.location.pathname.split("/").filter(Boolean);
   return parts[1] || "";
 }
 
+// Helper function to create an element with optional class and text content
 function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -10,26 +14,33 @@ function el(tag, className, text) {
   return node;
 }
 
+// This function creates a styled section card with a title and a body.
 function sectionCard(title) {
   const section = el("section", "rounded-3xl bg-zinc-900/60 p-7 ring-1 ring-white/10");
   const h = el("h2", "text-sm font-semibold uppercase tracking-wider text-zinc-300", title);
   const body = el("div", "mt-4");
+
   section.appendChild(h);
   section.appendChild(body);
   return { section, body };
 }
 
+// This function builds a table element given an array of headers and an array of rows.
 function buildTable(headers, rows) {
   const wrap = el("div", "overflow-x-auto rounded-xl ring-1 ring-white/10");
   const table = el("table", "w-full min-w-[28rem] text-left text-sm text-zinc-300");
   const thead = el("thead", "border-b border-white/10 bg-zinc-900/80");
   const trh = el("tr");
+
   headers.forEach((h) => {
     const th = el("th", "px-3 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400", h);
     trh.appendChild(th);
   });
+
   thead.appendChild(trh);
+
   const tbody = el("tbody", "divide-y divide-white/10");
+
   rows.forEach((cells) => {
     const tr = el("tr", "hover:bg-white/[0.03]");
     cells.forEach((c) => {
@@ -39,22 +50,29 @@ function buildTable(headers, rows) {
     });
     tbody.appendChild(tr);
   });
+
   table.appendChild(thead);
   table.appendChild(tbody);
   wrap.appendChild(table);
   return wrap;
 }
 
+// This function formats a number with commas and optional decimal places. 
+// If the input is not a valid number, it returns an em dash.
 function formatNumber(value, options) {
   if (typeof value !== "number" || Number.isNaN(value)) return "—";
   return value.toLocaleString(undefined, options);
 }
 
+// This function formats latitude and longitude coordinates to three decimal places. 
+// If the inputs are not valid numbers, it returns an em dash.
 function formatCoordinates(latitude, longitude) {
   if (typeof latitude !== "number" || typeof longitude !== "number") return "—";
   return `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
 }
 
+// This function formats a date-time string into a more readable format.
+// If the input is not a valid date, it returns the original value as a string.
 function formatDateTime(value) {
   if (!value) return "—";
   const date = new Date(value);
@@ -62,6 +80,9 @@ function formatDateTime(value) {
   return date.toLocaleString();
 }
 
+// Needed function to load the country details when the page is accessed. 
+// It fetches the country data from the server and renders it on the page. 
+// It also handles the case where the country is not found or when there is an error during loading.
 async function loadCountry() {
   const statusEl = document.getElementById("countryStatus");
   const reportEl = document.getElementById("countryReport");
@@ -108,6 +129,10 @@ async function loadCountry() {
   }
 }
 
+// Necessary function to render the country details on the page. 
+// It takes the country data as input and updates the DOM elements accordingly. 
+// It also handles the display of various sections such as detailed info, happiness report, population, weather, air quality, earthquakes, and cache info. 
+// If the country is a custom country loaded from the database, it shows options to edit or delete the country.
 function renderCountry(record) {
   const c = record.country;
   const d = record.detailedCountryInfo;

@@ -14,9 +14,11 @@ const APP_HOST = process.env.APP_HOST || "127.0.0.1";
 
 // static files
 app.use(express.static(path.join(__dirname, "public")));
+
 // Needed to add this line for middleware to parse JSON bodies
 app.use(express.json());
 
+// API routes
 app.get("/api/countries", (req, res) => {
     const query = String(req.query.q || "").trim();
     const sort = String(req.query.sort || "").trim();
@@ -69,7 +71,7 @@ app.get("/api/countries/:slug", async (req, res) => {
     res.json(country);
 });
 
-// route
+// Web page routes
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "views", "index.html"));
 });
