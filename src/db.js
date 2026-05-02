@@ -30,6 +30,9 @@ const hasConnectionInfo = Boolean(
 const pool = hasConnectionInfo ? new Pool(dbConfig) : null;
 let initPromise = null;
 
+// Initializes the database by creating necessary tables if they do not exist, 
+// ensuring that the schema is set up for storing country data and related information. 
+// This function is designed to be idempotent and can be safely called multiple times without causing issues.
 async function initializeDatabase() {
   if (!pool) return false;
   if (initPromise) return initPromise;
@@ -142,6 +145,9 @@ async function initializeDatabase() {
   return initPromise;
 }
 
+// A helper function to execute a callback with a database client, 
+// ensuring that the client is properly released back to the pool after the operation, 
+// and that the database is initialized before use. This function abstracts away the connection management and allows for cleaner code when performing database operations.
 async function withClient(callback) {
   await initializeDatabase();
   const client = await pool.connect();
@@ -153,6 +159,7 @@ async function withClient(callback) {
   }
 }
 
+// Retrieves detailed information about a country by its slug from the database,
 async function getStoredCountryBundle(slug) {
   if (!pool) return null;
 
@@ -241,6 +248,8 @@ async function getStoredCountryBundle(slug) {
   });
 }
 
+// Upserts a country bundle into the database, 
+// including the main country data and all related information such as detailed info, air quality, earthquakes, population, weather, and happiness scores.
 async function upsertCountryBundle(payload) {
   if (!pool) return false;
 
