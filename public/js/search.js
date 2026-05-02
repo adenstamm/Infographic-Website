@@ -1,3 +1,6 @@
+// This file contains the JavaScript code for the country search functionality on the infographic website.
+// It includes functions to slugify country names, navigate to country pages, 
+// fetch country lists from the API, and populate datalists for search suggestions.
 (function () {
   function slugifyCountryQuery(input) {
     return String(input || "")

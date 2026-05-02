@@ -1,3 +1,6 @@
+// This file contains the JavaScript code for the landing page of the infographic website. 
+// It handles the country search functionality, displays suggested countries based on happiness ranking, 
+// and manages the visibility of the "Add Country" form.
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("countrySearchForm");
   const input = document.getElementById("countryQuery");
