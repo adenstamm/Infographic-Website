@@ -58,12 +58,14 @@ const REST_LOOKUP_ALIASES = {
 
 const metadataCache = new Map();
 
+// Removes diacritics and other Unicode marks for more consistent comparisons and slug generation
 function stripDiacritics(input) {
   return String(input || "")
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+// Generates URL-friendly slugs from country names, e.g. "Côte d'Ivoire" -> "cote-divoire"
 function slugifyCountryName(input) {
   return stripDiacritics(input)
     .trim()
@@ -73,6 +75,7 @@ function slugifyCountryName(input) {
     .replace(/(^-|-$)/g, "");
 }
 
+// Normalizes country names for consistent comparisons, e.g. "Côte d'Ivoire" -> "cote divoire"
 function normalizeComparableName(input) {
   return stripDiacritics(input)
     .trim()
@@ -84,6 +87,7 @@ function normalizeComparableName(input) {
     .trim();
 }
 
+// Formats the currencies object from REST Countries into a readable string, e.g. "Euro (EUR), US Dollar (USD)"
 function formatCurrencies(currencies) {
   if (!currencies || typeof currencies !== "object") return null;
 
@@ -95,18 +99,24 @@ function formatCurrencies(currencies) {
     .join(", ");
 }
 
+// Formats the demonyms object from REST Countries into a readable string, e.g. "French, Frenchman"
 function formatDemonyms(demonyms) {
   if (!demonyms || typeof demonyms !== "object") return null;
 
   return [...new Set(Object.values(demonyms).map((entry) => entry?.m).filter(Boolean))].join(", ");
 }
 
+// Joins array values into a string or returns a single value, ensuring empty or null values become null
+// E.g. ["Paris"] -> "Paris", ["Berlin", "Munich"] -> "Berlin, Munich", [] -> null, null -> null
 function joinValues(value) {
   if (Array.isArray(value)) return value.filter(Boolean).join(", ") || null;
   if (value == null || value === "") return null;
   return String(value);
 }
 
+// Loads the happiness dataset from the CSV file, 
+// normalizes and ranks the records, 
+// and builds lookup maps for efficient access
 function loadCountryDataset() {
   const fileContent = fs.readFileSync(HAPPINESS_CSV_PATH, "utf8");
   const records = parse(fileContent, {
@@ -165,6 +175,8 @@ function loadCountryDataset() {
 
 const dataset = loadCountryDataset();
 
+// Extracts a summary of the country record for listing and search results, 
+// omitting detailed metadata and external data to keep the payload lightweight
 function summarizeCountry(record) {
   return {
     slug: record.slug,
@@ -176,12 +188,14 @@ function summarizeCountry(record) {
   };
 }
 
+// Clamps the limit parameter to a reasonable range to prevent excessive data processing and potential abuse
 function clampLimit(limit, fallback = 25) {
   const parsedLimit = Number.parseInt(limit, 10);
   if (!Number.isFinite(parsedLimit)) return fallback;
   return Math.max(1, Math.min(parsedLimit, 250));
 }
 
+// Lists countries with optional sorting by happiness and limiting the number of results,
 function listCountries({ limit, sort } = {}) {
   const safeLimit = clampLimit(limit, dataset.alphabetical.length);
   const source =
@@ -192,6 +206,8 @@ function listCountries({ limit, sort } = {}) {
   return source.slice(0, safeLimit).map(summarizeCountry);
 }
 
+// Resolves a country record by slug or name, 
+// checking for direct matches and route aliases to ensure flexible lookups
 function resolveCountryRecord(slugOrName) {
   const slug = slugifyCountryName(slugOrName);
   if (!slug) return null;
@@ -205,6 +221,9 @@ function resolveCountryRecord(slugOrName) {
   return dataset.bySlug.get(slugifyCountryName(aliasTarget)) ?? null;
 }
 
+// Scores how well a country record matches the search query based on various criteria,
+// including exact slug match, alias match, normalized name match, and partial matches, 
+// to enable relevant search results even with imperfect queries
 function scoreSearchMatch(record, normalizedQuery, querySlug, aliasTarget) {
   if (!normalizedQuery && !querySlug) return 0;
   if (record.slug === querySlug) return 100;
@@ -217,6 +236,7 @@ function scoreSearchMatch(record, normalizedQuery, querySlug, aliasTarget) {
   return 0;
 }
 
+// Searches for countries matching the query, scoring and ranking results based on relevance to the query, 
 function searchCountries(query, { limit } = {}) {
   const safeLimit = clampLimit(limit, 10);
   const normalizedQuery = normalizeComparableName(query);
@@ -241,6 +261,7 @@ function searchCountries(query, { limit } = {}) {
     .map(({ record }) => summarizeCountry(record));
 }
 
+// Fetches JSON data from a URL with support for custom headers and timeout,
 function fetchJson(url, { headers, timeoutMs = 8000 } = {}) {
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(url);
@@ -285,10 +306,13 @@ function fetchJson(url, { headers, timeoutMs = 8000 } = {}) {
   });
 }
 
+// Builds a list of candidate names to query the REST Countries API, including the original name and any known aliases, 
+// to improve the chances of finding a match even if the input name differs from the official name
 function buildLookupCandidates(countryName) {
   return [countryName, ...(REST_LOOKUP_ALIASES[countryName] || [])];
 }
 
+// Scores how well a REST Countries API candidate matches the target country name and the originally requested name,
 function scoreRestCountryCandidate(candidate, targetName, requestedName) {
   const target = normalizeComparableName(targetName);
   const requested = normalizeComparableName(requestedName);
@@ -313,6 +337,7 @@ function scoreRestCountryCandidate(candidate, targetName, requestedName) {
   return score;
 }
 
+// Queries the REST Countries API for a country matching the requested name,
 async function requestRestCountry(requestedName, targetName) {
   try {
     const payload = await fetchJson(
@@ -341,6 +366,7 @@ async function requestRestCountry(requestedName, targetName) {
   }
 }
 
+// Fetches country metadata from the REST Countries API, using caching to avoid redundant requests,
 async function fetchCountryMetadata(countryName) {
   if (metadataCache.has(countryName)) {
     return metadataCache.get(countryName);
@@ -368,6 +394,7 @@ function getPopulationApiKey() {
   return process.env.POPULATIONAPIKEY || process.env.AQAPIKEY || null;
 }
 
+// Fetches population data from the API Ninjas Population API, including historical population and forecasts, and formats it into a readable structure
 async function fetchPopulation(countryName) {
   const apiKey = getPopulationApiKey();
   if (!apiKey) return null;
@@ -407,6 +434,7 @@ async function fetchPopulation(countryName) {
   }
 }
 
+// Fetches current weather data from the WeatherAPI, including rainfall, temperature, humidity, and UV index, based on the country's latitude and longitude, and formats it into a readable structure
 async function fetchWeather(latitude, longitude, countryName) {
   const apiKey = process.env.WEATHERAPIKEY;
   if (!apiKey || latitude == null || longitude == null) return null;
@@ -431,6 +459,9 @@ async function fetchWeather(latitude, longitude, countryName) {
   }
 }
 
+// Fetches current air quality data from the API Ninjas Air Quality API, 
+// including overall AQI and pollutant-specific measurements, 
+// based on the country's latitude and longitude, and formats it into a readable structure
 async function fetchAirQuality(latitude, longitude, countryName) {
   const apiKey = process.env.AQAPIKEY;
   if (!apiKey || latitude == null || longitude == null) return null;
@@ -470,6 +501,8 @@ async function fetchAirQuality(latitude, longitude, countryName) {
   }
 }
 
+// Fetches recent significant earthquakes from the USGS Earthquake API based on the country's latitude and longitude,
+// including details such as magnitude, location, and time, and formats it into a readable structure
 async function fetchEarthquakes(latitude, longitude, countryName) {
   if (latitude == null || longitude == null) return [];
 
@@ -506,6 +539,7 @@ async function fetchEarthquakes(latitude, longitude, countryName) {
   }
 }
 
+// Builds the happiness data rows for a country, including historical records if available, and ensures the most recent data is listed first
 function buildHappinessRows(record) {
   const rows = dataset.rankedByHappiness
     .filter((row) => row.slug === record.slug)
@@ -530,6 +564,7 @@ function buildHappinessRows(record) {
       ];
 }
 
+// Maps the country record, REST Countries metadata, and external data into a structured payload for the frontend,
 function mapCountryPayload(record, metadata, extras) {
   const capitalCoordinates = metadata?.capitalInfo?.latlng || [];
   const countryCoordinates = metadata?.latlng || [];
@@ -578,6 +613,8 @@ function mapCountryPayload(record, metadata, extras) {
   };
 }
 
+// Maps the stored country bundle from the database into the structured payload format expected by the frontend, 
+// ensuring that all fields are properly typed and formatted, and that the source is indicated as "database"
 function mapStoredBundle(bundle) {
   const country = bundle.country;
   const detailed = bundle.detailedCountryInfo;
@@ -673,6 +710,7 @@ function mapStoredBundle(bundle) {
   };
 }
 
+// Retrieves detailed information about a country by its slug,
 async function getCountryDetails(slug) {
   const record = resolveCountryRecord(slug);
   if (!record) return null;

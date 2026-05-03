@@ -471,12 +471,12 @@ async function main() {
   await importDetailedCountryInfo(); 
   console.log('Data import complete for countries and detailed country info');
 
-  //await importAQData(); 
-  //await importPopulationData(); 
+  await importAQData(); 
+  await importPopulationData(); 
 
-  //await importWeatherData();  
-  //await importHappinessData(); 
-  //await importEarthquakeData();
+  await importWeatherData();  
+  await importHappinessData(); 
+  await importEarthquakeData();
 
   await client.end();
 }

@@ -27,7 +27,9 @@ CREATE TABLE Country (
     continents      VARCHAR(100) NOT NULL,
     capital         VARCHAR(100),
     languages       VARCHAR(300) NOT NULL,
-    populationNumber INT
+    populationNumber INT,
+    is_custom       BOOLEAN DEFAULT false,
+    slug            VARCHAR(160) UNIQUE
 );
 
 
